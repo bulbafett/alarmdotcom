@@ -24,6 +24,7 @@ from .base_device import HardwareBaseDevice
 from .const import (
     CONF_ARM_AWAY,
     CONF_ARM_CODE,
+    CONF_ARM_CODE_REQUIRED,
     CONF_ARM_HOME,
     CONF_ARM_NIGHT,
     CONF_FORCE_BYPASS,
@@ -80,6 +81,11 @@ class AlarmControlPanel(HardwareBaseDevice, AlarmControlPanelEntity):  # type: i
             if (arm_code := controller.options.get(CONF_ARM_CODE))
             else None
         )
+
+        # Upstream #504: with a code set, v3.0.15 required it for arming as well as
+        # disarming. Optional now; the default keeps that behavior. Disarming always
+        # needs the code when one is set.
+        self._attr_code_arm_required = bool(controller.options.get(CONF_ARM_CODE_REQUIRED, True))
 
         self._attr_supported_features = (
             AlarmControlPanelEntityFeature.ARM_HOME | AlarmControlPanelEntityFeature.ARM_AWAY
@@ -145,7 +151,7 @@ class AlarmControlPanel(HardwareBaseDevice, AlarmControlPanelEntity):  # type: i
 
         arm_options = self._controller.options.get(CONF_ARM_NIGHT, {})
 
-        if self._validate_code(code):
+        if self._validate_code(code, arming=True):
             try:
                 await self._device.async_arm_night(
                     force_bypass=CONF_FORCE_BYPASS in arm_options,
@@ -160,7 +166,7 @@ class AlarmControlPanel(HardwareBaseDevice, AlarmControlPanelEntity):  # type: i
 
         arm_options = self._controller.options.get(CONF_ARM_HOME, {})
 
-        if self._validate_code(code):
+        if self._validate_code(code, arming=True):
             try:
                 await self._device.async_arm_stay(
                     force_bypass=CONF_FORCE_BYPASS in arm_options,
@@ -175,7 +181,7 @@ class AlarmControlPanel(HardwareBaseDevice, AlarmControlPanelEntity):  # type: i
 
         arm_options = self._controller.options.get(CONF_ARM_AWAY, {})
 
-        if self._validate_code(code):
+        if self._validate_code(code, arming=True):
             try:
                 await self._device.async_arm_away(
                     force_bypass=CONF_FORCE_BYPASS in arm_options,
@@ -189,8 +195,10 @@ class AlarmControlPanel(HardwareBaseDevice, AlarmControlPanelEntity):  # type: i
     # Helpers
     #
 
-    def _validate_code(self, code: str | None) -> bool | str:
-        """Validate given code."""
+    def _validate_code(self, code: str | None, arming: bool = False) -> bool | str:
+        """Validate given code. Arming may skip the code when it isn't required to arm."""
+        if arming and not self.code_arm_required and not code:
+            return True
         check: bool | str = (arm_code := self._controller.options.get(CONF_ARM_CODE)) in [
             None,
             "",

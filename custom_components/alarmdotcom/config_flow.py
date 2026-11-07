@@ -37,6 +37,7 @@ from .const import (
     CONF_2FA_COOKIE,
     CONF_ARM_AWAY,
     CONF_ARM_CODE,
+    CONF_ARM_CODE_REQUIRED,
     CONF_ARM_HOME,
     CONF_ARM_MODE_OPTIONS,
     CONF_ARM_NIGHT,
@@ -306,6 +307,10 @@ class ADCOptionsFlowHandler(config_entries.OptionsFlow):  # type: ignore
                     CONF_ARM_CODE,
                     default=("" if not (arm_code_raw := self.options.get(CONF_ARM_CODE)) else arm_code_raw),
                 ): selector.selector({"text": {"type": "password"}}),
+                vol.Required(
+                    CONF_ARM_CODE_REQUIRED,
+                    default=self.options.get(CONF_ARM_CODE_REQUIRED, True),
+                ): selector.selector({"boolean": {}}),
                 vol.Required(
                     CONF_UPDATE_INTERVAL,
                     default=self.options.get(CONF_UPDATE_INTERVAL, CONF_DEFAULT_UPDATE_INTERVAL_SECONDS),

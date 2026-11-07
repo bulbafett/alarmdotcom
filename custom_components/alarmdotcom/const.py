@@ -47,6 +47,7 @@ CONF_OTP_METHOD = "otp_method"
 CONF_OTP_METHODS_LIST = "otp_methods_list"
 
 CONF_ARM_CODE = "arm_code"
+CONF_ARM_CODE_REQUIRED = "arm_code_required"
 CONF_UPDATE_INTERVAL = "update_interval"
 CONF_WEBSOCKET_RECONNECT_TIMEOUT = "ws_reconnect_timeout"
 CONF_ARM_HOME = "arm_home_options"
@@ -65,6 +66,7 @@ CONF_ARM_MODE_OPTIONS = {
 
 CONF_OPTIONS_DEFAULT = {
     CONF_ARM_CODE: "",
+    CONF_ARM_CODE_REQUIRED: True,
     CONF_ARM_HOME: [],
     CONF_ARM_AWAY: [],
     CONF_ARM_NIGHT: [],
