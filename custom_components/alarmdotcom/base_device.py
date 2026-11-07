@@ -9,7 +9,9 @@ from typing import Any, Final
 
 from homeassistant.components import persistent_notification
 from homeassistant.core import callback
-from homeassistant.helpers.entity import DeviceInfo, EntityCategory, EntityDescription
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import EntityCategory, EntityDescription
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
 )
@@ -51,14 +53,33 @@ class BaseDevice(CoordinatorEntity):  # type: ignore
 
         self._attr_extra_state_attributes: MutableMapping[str, Any] = {}
 
-        self._attr_device_info = DeviceInfo(
-            {
-                "manufacturer": "Alarm.com",
-                "name": device.name,
-                "identifiers": {(DOMAIN, self._adc_id)},
-                "via_device": (DOMAIN, self._device.partition_id),
-            }
-        )
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device registry info.
+
+        Built when the entity platform registers the device (hass and platform are
+        set by then), because the parent link needs the partition's registry device
+        id: HA 2026.11 deprecates the `via_device` identifier tuple (removed in
+        2027.8) in favour of `via_device_id`, and no longer takes a positional dict.
+        The panel/partition device itself has no partition_id, so it gets no parent.
+        If the partition isn't registered yet (platform setup order), the link is
+        left out and fills in on the next registration.
+        """
+
+        fields: dict[str, Any] = {
+            "manufacturer": "Alarm.com",
+            "name": self._device.name,
+            "identifiers": {(DOMAIN, self._adc_id)},
+        }
+
+        partition_id = self._device.partition_id
+        config_entry = self.platform.config_entry if self.platform else None
+        if partition_id and partition_id != self._adc_id and self.hass and config_entry:
+            parent = dr.async_get(self.hass).async_get_device_by_identifier((DOMAIN, partition_id), config_entry.entry_id)
+            if parent is not None:
+                fields["via_device_id"] = parent.id
+
+        return DeviceInfo(**fields)
 
     @property
     def device_type_name(self) -> str:
