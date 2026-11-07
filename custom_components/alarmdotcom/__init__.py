@@ -90,12 +90,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         if device.device_subtype not in SENSOR_SUBTYPE_BLACKLIST and device.has_state:
             device_ids_via_adc.add(device.id_)
 
-    # Purge deleted devices from Home Assistant
-    for deleted_device in list(device_registry.deleted_devices.values()):
-        for identifier in deleted_device.identifiers:
-            if identifier[0] == DOMAIN:
-                LOGGER.info("Removing orphaned device from Home Assistant: %s", deleted_device.identifiers)
-                del device_registry.deleted_devices[deleted_device.id]
+    # The upstream purge of this domain's deleted-device tombstones was removed:
+    # device_registry.deleted_devices is deprecated (removed in HA 2027.9) and has no
+    # public replacement. HA expires orphaned deleted devices on its own.
 
     # Will be used during virtual device creation.
     device_ids_via_hass: set[str] = set()
