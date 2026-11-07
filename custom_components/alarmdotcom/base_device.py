@@ -19,7 +19,7 @@ from pyalarmdotcomajax.devices.registry import AllDevices_t
 from pyalarmdotcomajax.extensions import ConfigurationOption as libConfigurationOption
 
 from . import const as c
-from . import homelab_pyalarmdotcomajax_patch
+from . import pyalarmdotcomajax_patches
 from .const import (
     ATTRIB_BATTERY_CRITICAL,
     ATTRIB_BATTERY_LOW,
@@ -32,7 +32,7 @@ from .controller import AlarmIntegrationController
 LOGGER = logging.getLogger(__name__)
 
 # Every platform imports this module, so this runs before the websocket starts.
-homelab_pyalarmdotcomajax_patch.apply()
+pyalarmdotcomajax_patches.apply()
 
 
 class BaseDevice(CoordinatorEntity):  # type: ignore

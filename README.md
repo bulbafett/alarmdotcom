@@ -1,4 +1,4 @@
-> **Homelab fork.** See [HOMELAB.md](HOMELAB.md) for what differs from upstream and how it's deployed.
+> **Fork of v3.0.15 with fixes for current Home Assistant.** See [FORK.md](FORK.md) for what changed and how to install. Upstream maintenance is paused.
 
 <p align="center"><img src="https://user-images.githubusercontent.com/466460/175781161-dd70c5b4-d45a-4cdb-bf57-d4fd7fbedb0b.png" width="125"></a>
 <h1 align="center">Alarm.com for Home Assistant</h1>

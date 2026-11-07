@@ -62,7 +62,7 @@ _client_log = logging.getLogger("pyalarmdotcomajax.websockets.client")
 _lib_log = logging.getLogger("pyalarmdotcomajax")
 log = logging.getLogger(__name__)
 
-_PATCH_MARKER = "_homelab_ws_patched"
+_PATCH_MARKER = "_alarmdotcom_v3_patched"
 _orig_device_type_present = _AlarmController._async_device_type_present
 
 
