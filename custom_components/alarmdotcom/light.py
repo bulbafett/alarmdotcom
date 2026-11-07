@@ -6,8 +6,7 @@ import logging
 from typing import Any
 
 from homeassistant import core
-from homeassistant.components import light
-from homeassistant.components.light import ATTR_BRIGHTNESS, LightEntity
+from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback, DiscoveryInfoType
 from pyalarmdotcomajax.devices.light import Light as libLight
@@ -53,13 +52,10 @@ class Light(HardwareBaseDevice, LightEntity):  # type: ignore
         """Pass coordinator to CoordinatorEntity."""
         super().__init__(controller, device)
 
-        self._attr_supported_color_modes = (
-            [light.COLOR_MODE_BRIGHTNESS] if self._device.brightness else [light.COLOR_MODE_ONOFF]
-        )
-
-        self._attr_supported_features = light.SUPPORT_BRIGHTNESS
-
-        self._attr_color_mode = light.COLOR_MODE_BRIGHTNESS if self._device.brightness else light.COLOR_MODE_ONOFF
+        # HA 2026.3 removed the COLOR_MODE_* / SUPPORT_BRIGHTNESS constants (upstream #524).
+        # Brightness support is implied by the color mode.
+        self._attr_color_mode = ColorMode.BRIGHTNESS if self._device.brightness else ColorMode.ONOFF
+        self._attr_supported_color_modes = {self._attr_color_mode}
 
         self._attr_assumed_state = self._device.supports_state_tracking is False
 
