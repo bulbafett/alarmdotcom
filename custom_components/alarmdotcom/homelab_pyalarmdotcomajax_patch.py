@@ -1,4 +1,4 @@
-"""Runtime patch for pyalarmdotcomajax==0.5.13 websocket bugs (homelab fork).
+"""Runtime patches for pyalarmdotcomajax==0.5.13 bugs.
 
 pyalarmdotcomajax is a pip dependency that HA installs into site-packages, so its
 files can't be edited or bind-mounted (HA's installer fails on a mounted file and
@@ -6,13 +6,13 @@ then treats the whole package as missing). This module patches the installed
 package's objects in memory instead. base_device.py imports it and calls apply()
 at load time; apply() is idempotent.
 
-THE TWO BUGS FIXED (source reference: pyalarmdotcomajax==0.5.13, upstream tag
-v0.5.13 -- neither reported upstream as of 2026-08-12):
+THE BUGS FIXED (source reference: pyalarmdotcomajax==0.5.13, upstream tag v0.5.13):
 
 1. pyalarmdotcomajax/websockets/messages.py's process_raw_message() left `device`
    unbound when device_registry.get() raised UnkonwnDevice (pyalarmdotcomajax's own
    term for devices on its internal blacklist), causing UnboundLocalError on every
-   websocket event for such a device -- ~18x/day on cerebro, each one tearing down
+   websocket event for such a device (seen ~18x/day on one install, also in
+   pyalarmdotcom/alarmdotcom#524), each one tearing down
    and reconnecting the websocket (controller.py's
    CONF_DEFAULT_WEBSOCKET_RECONNECT_TIMEOUT = 300s gap per occurrence). Now raises
    UnsupportedWebSocketMessage instead, which the patched _connect() below catches
@@ -27,6 +27,12 @@ v0.5.13 -- neither reported upstream as of 2026-08-12):
    `_ws_close_event.wait()` stuck forever for that instance, no automatic recovery
    short of a full HA restart. Now degrades cleanly to DISCONNECTED like every other
    failure path in that method.
+
+3. AlarmController._async_device_type_present() assumes the system endpoint returns
+   one object under "data"; for some accounts it's a list, and the AttributeError
+   fails the first update, so the integration never sets up
+   (pyalarmdotcom/alarmdotcom#554). The check only decides whether to fetch image
+   sensors, so on that error it now logs a warning and answers "none present".
 """
 
 from __future__ import annotations
@@ -36,6 +42,7 @@ import logging
 
 import aiohttp
 
+from pyalarmdotcomajax import AlarmController as _AlarmController
 from pyalarmdotcomajax.exceptions import (
     AuthenticationFailed,
     UnexpectedResponse,
@@ -52,9 +59,25 @@ from pyalarmdotcomajax.websockets.client import WebSocketState
 # place they would from the unpatched code.
 _messages_log = logging.getLogger("pyalarmdotcomajax.websockets.messages")
 _client_log = logging.getLogger("pyalarmdotcomajax.websockets.client")
+_lib_log = logging.getLogger("pyalarmdotcomajax")
 log = logging.getLogger(__name__)
 
 _PATCH_MARKER = "_homelab_ws_patched"
+_orig_device_type_present = _AlarmController._async_device_type_present
+
+
+async def _patched_device_type_present(self, system_id, device_type, retry_on_failure=True):
+    """AlarmController._async_device_type_present, wrapped (bug 3 above)."""
+
+    try:
+        return await _orig_device_type_present(self, system_id, device_type, retry_on_failure)
+    except AttributeError:
+        _lib_log.warning(
+            "Unexpected Alarm.com system response while checking for %ss; assuming none"
+            " (pyalarmdotcom/alarmdotcom#554).",
+            device_type,
+        )
+        return False
 
 
 def _patched_process_raw_message(message, device_registry):
@@ -179,6 +202,7 @@ def apply() -> None:
     # bound reference in client.py's namespace, so it has to be patched here too.
     _ws_client.process_raw_message = _patched_process_raw_message
     _ws_client.WebSocketClient._connect = _patched_connect
+    _AlarmController._async_device_type_present = _patched_device_type_present
 
     setattr(_ws_client, _PATCH_MARKER, True)
-    log.info("Applied homelab pyalarmdotcomajax websocket patches")
+    log.info("Applied pyalarmdotcomajax 0.5.13 runtime patches")
