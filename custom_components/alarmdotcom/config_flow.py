@@ -267,7 +267,10 @@ class ADCFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore
     async def async_step_reauth(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Perform reauth upon an API authentication error."""
         LOGGER.debug("Reauthenticating.")
-        self._existing_entry = await self.async_set_unique_id(self._config_title)
+        # async_set_unique_id() found no entry (the title isn't the unique id), so
+        # async_step_final() created a new entry, which HA 2026.5+ refuses in a reauth
+        # flow (upstream #537, PR #546).
+        self._existing_entry = self._get_reauth_entry()
         return await self.async_step_reauth_confirm(user_input)
 
     async def async_step_reauth_confirm(self, user_input: dict[str, Any] | None = None) -> FlowResult:
